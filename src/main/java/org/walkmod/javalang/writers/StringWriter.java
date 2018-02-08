@@ -17,6 +17,7 @@ package org.walkmod.javalang.writers;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 
 import org.walkmod.javalang.actions.Action;
@@ -77,22 +78,25 @@ public class StringWriter extends AbstractFileWriter {
    public File createOutputDirectory(Object o) {
       File out = null;
       if (o instanceof CompilationUnit) {
-         CompilationUnit n = (CompilationUnit) o;
-         List<TypeDeclaration> types = n.getTypes();
-         if (types != null) {
+         final CompilationUnit n = (CompilationUnit) o;
+         final List<TypeDeclaration> types = n.getTypes();
+         final URI uri = n.getURI();
+
+         if (uri != null) {
+            out = new File(uri);
+         } else if (types != null) {
             try {
                out = FileUtils.getSourceFile(getOutputDirectory(), n.getPackage(), n.getTypes().get(0))
                      .getCanonicalFile();
-
-               if (!out.exists()) {
-                  try {
-                     FileUtils.createSourceFile(getOutputDirectory(), out);
-                  } catch (Exception e) {
-                     throw new RuntimeException(e);
-                  }
-               }
             } catch (IOException e1) {
                throw new RuntimeException(e1);
+            }
+         }
+         if (out != null && !out.exists()) {
+            try {
+               FileUtils.createSourceFile(getOutputDirectory(), out);
+            } catch (Exception e) {
+               throw new RuntimeException(e);
             }
          }
       }

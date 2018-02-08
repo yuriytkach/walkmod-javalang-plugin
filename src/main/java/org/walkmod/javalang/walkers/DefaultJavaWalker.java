@@ -394,25 +394,21 @@ public class DefaultJavaWalker extends AbstractWalker {
 
     protected void createOrUpdateExternalCU(Object element, VisitorContext vc, CompilationUnit returningCU)
             throws Exception {
-        if (!isPackageInfo(returningCU)) {
-            //it is not a package-info.java
+        final File outputJavaFile = resolveFile(returningCU);
 
-            File outputJavaFile = resolveFile(returningCU);
-
-            if (!outputJavaFile.exists()) {
-                writeNewCU(element, vc, returningCU);
-
+        if (!outputJavaFile.exists()) {
+            returningCU.setURI(outputJavaFile.toURI());
+            writeNewCU(element, vc, returningCU);
+        } else {
+            if (!outputJavaFile.equals(originalFile) || !onlyWriteChanges) {
+                //we are rewriting an existing source file in the output directory
+                overwrite(element, vc, outputJavaFile);
             } else {
-                if (!outputJavaFile.equals(originalFile) || !onlyWriteChanges) {
-                    //we are rewriting an existing source file in the output directory
-                    overwrite(element, vc, outputJavaFile);
-                } else {
-                    if (!silent) {
-                        log.debug(originalFile.getPath() + " [not written] ");
-                    }
+                if (!silent) {
+                    log.debug(originalFile.getPath() + " [not written] ");
                 }
-
             }
+
         }
     }
 

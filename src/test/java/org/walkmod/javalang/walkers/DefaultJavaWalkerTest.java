@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.log4j.BasicConfigurator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.walkmod.conf.entities.TransformationConfig;
@@ -15,6 +16,7 @@ import org.walkmod.conf.entities.impl.WalkerConfigImpl;
 import org.walkmod.javalang.ast.CompilationUnit;
 import org.walkmod.javalang.compiler.symbols.RequiresSemanticAnalysis;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
+import org.walkmod.javalang.writers.StringWriter;
 import org.walkmod.walkers.VisitorContext;
 
 public class DefaultJavaWalkerTest {
@@ -252,6 +254,68 @@ public class DefaultJavaWalkerTest {
         }
     }
 
+    @Test
+    public void testHaha() throws Exception {
+        BasicConfigurator.configure();
+
+        File tempFile = new File("target/classes/Hello.java");
+        tempFile.createNewFile();
+        tempFile.deleteOnExit();
+        FileUtils.writeStringToFile(tempFile, "import java.util.function.*;\n" +
+            "import java.util.concurrent.atomic.*;\n" +
+            "public class Hello {\n" +
+            "\tpublic void haha() {\n" +
+            "\t\thello(new AtomicInteger(25), nnn -> nnn.getAndIncrement());\n" +
+            "\t}\n\n" +
+            "\tprivate <T extends Number, R> R hello(T num, Function<T, R> f) {\n" +
+            "\t\treturn f.apply(num);\n" +
+            "\t}\n" +
+            "}\n");
+
+        Process exec = Runtime.getRuntime().exec("javac " + tempFile.getAbsolutePath());
+        exec.waitFor();
+        if (exec.exitValue() == 0) {
+            System.out.println("Compiled successfully");
+            new File("target/classes/Hello.class").deleteOnExit();
+            Class<?> hello = this.getClass().getClassLoader().loadClass("Hello");
+            System.out.println(hello);
+        }
+
+        DefaultJavaWalker walker = new DefaultJavaWalker(){
+            @Override
+            protected String getReaderPath() {
+                return "/tmp";
+            }
+            @Override
+            protected String getWriterPath() {
+                return "/tmp";
+            }
+        };
+        List<Object> visitors = new LinkedList<Object>();
+        MyVisitor instance = new MyVisitor();
+        visitors.add(instance);
+        walker.setVisitors(visitors);
+        walker.setParser(new DefaultJavaParser());
+        walker.setClassLoader(this.getClass().getClassLoader());
+
+        ChainConfigImpl cfg = new ChainConfigImpl();
+        WalkerConfigImpl walkerCfg = new WalkerConfigImpl();
+
+        List<TransformationConfig> transformations = new LinkedList<TransformationConfig>();
+        TransformationConfigImpl tcfg = new TransformationConfigImpl();
+        tcfg.setVisitorInstance(instance);
+        transformations.add(tcfg);
+        walkerCfg.setTransformations(transformations);
+
+        cfg.setWalkerConfig(walkerCfg);
+        walker.setChainConfig(cfg);
+        StringWriter writer = new StringWriter();
+        walker.setWriter(writer);
+
+        walker.accept(tempFile);
+
+    }
+
     public class VisitorWithException extends VoidVisitorAdapter<VisitorContext> {
         @Override
         public void visit(CompilationUnit cu, VisitorContext vc) {
@@ -262,5 +326,13 @@ public class DefaultJavaWalkerTest {
     @RequiresSemanticAnalysis
     public class EmptySemanticVisitor extends VoidVisitorAdapter<VisitorContext> {
 
+    }
+
+    @RequiresSemanticAnalysis
+    public class MyVisitor extends VoidVisitorAdapter<VisitorContext> {
+        @Override
+        public void visit(final CompilationUnit n, final VisitorContext arg) {
+            System.out.println(n.toString());
+        }
     }
 }
