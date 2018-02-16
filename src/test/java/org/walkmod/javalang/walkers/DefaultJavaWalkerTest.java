@@ -2,6 +2,8 @@ package org.walkmod.javalang.walkers;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,6 +20,8 @@ import org.walkmod.javalang.compiler.symbols.RequiresSemanticAnalysis;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
 import org.walkmod.javalang.writers.StringWriter;
 import org.walkmod.walkers.VisitorContext;
+
+import static org.junit.Assert.fail;
 
 public class DefaultJavaWalkerTest {
 
@@ -258,19 +262,9 @@ public class DefaultJavaWalkerTest {
     public void testHaha() throws Exception {
         BasicConfigurator.configure();
 
-        File tempFile = new File("target/classes/Hello.java");
-        tempFile.createNewFile();
-        tempFile.deleteOnExit();
-        FileUtils.writeStringToFile(tempFile, "import java.util.function.*;\n" +
-            "import java.util.concurrent.atomic.*;\n" +
-            "public class Hello {\n" +
-            "\tpublic void haha() {\n" +
-            "\t\thello(new AtomicInteger(25), nnn -> nnn.getAndIncrement());\n" +
-            "\t}\n\n" +
-            "\tprivate <T extends Number, R> R hello(T num, Function<T, R> f) {\n" +
-            "\t\treturn f.apply(num);\n" +
-            "\t}\n" +
-            "}\n");
+        URL resource = this.getClass().getClassLoader().getResource("Hello.java");
+
+        File tempFile = new File(resource.toURI());
 
         Process exec = Runtime.getRuntime().exec("javac " + tempFile.getAbsolutePath());
         exec.waitFor();
